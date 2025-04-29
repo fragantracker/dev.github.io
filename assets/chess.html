@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(90deg, #2668ab, #14ba99, #16bd59);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+
+        .timer {
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffcc00;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 80px);
+            grid-template-rows: repeat(8, 80px);
+            border: 5px solid #3e3e3e;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+            background: #333;
+            border-radius: 12px;
+        }
+
+        .square {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .black {
+            background-color: #171717;
+        }
+
+        .white {
+            background-color: #dfa21d;
+        }
+
+        .square:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+        }
+
+        .piece {
+            cursor: pointer;
+        }
+
+        .selected {
+            outline: 3px solid #ffcc00;
+            z-index: 10;
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 30px;
+            color: #dcdcdc;
+        }
+
+        @media (max-width: 768px) {
+            .chess-board {
+                grid-template-columns: repeat(8, 50px);
+                grid-template-rows: repeat(8, 50px);
+            }
+
+            .square {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="timer">
+        White Time: <span id="white-timer">10:00</span> | Black Time: <span id="black-timer">10:00</span>
+    </div>
+    <div class="chess-board"></div>
+    <div class="footer">Designed by Ahmad Idrees Yousofzai</div>
+    <script>
+        const board = document.querySelector('.chess-board');
+        const pieces = {
+            'P': '♙', // White Pawn
+            'R': '♖', // White Rook
+            'N': '♘', // White Knight
+            'B': '♗', // White Bishop
+            'Q': '♕', // White Queen
+            'K': '♔', // White King
+            'p': '♟', // Black Pawn
+            'r': '♜', // Black Rook
+            'n': '♞', // Black Knight
+            'b': '♝', // Black Bishop
+            'q': '♛', // Black Queen
+            'k': '♚'  // Black King
+        };
+        
+        const initialBoard = [
+            'rnbqkbnr',
+            'pppppppp',
+            '........',
+            '........',
+            '........',
+            '........',
+            'PPPPPPPP',
+            'RNBQKBNR'
+        ];
+
+        let selectedSquare = null;
+        let currentTurn = 'white';
+        let whiteTime = 600; // 10 minutes in seconds
+        let blackTime = 600;
+        let timerStarted = false;
+        const whiteTimerElement = document.getElementById('white-timer');
+        const blackTimerElement = document.getElementById('black-timer');
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimers() {
+            if (!timerStarted) return;
+            if (currentTurn === 'white') {
+                whiteTime--;
+            } else {
+                blackTime--;
+            }
+            whiteTimerElement.textContent = formatTime(whiteTime);
+            blackTimerElement.textContent = formatTime(blackTime);
+
+            if (whiteTime <= 0 || blackTime <= 0) {
+                alert(`${whiteTime <= 0 ? 'Black' : 'White'} wins on time!`);
+                clearInterval(timerInterval);
+            }
+        }
+
+        const timerInterval = setInterval(updateTimers, 1000);
+
+        function createBoard() {
+            board.innerHTML = '';
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const square = document.createElement('div');
+                    square.className = 'square ' + ((i + j) % 2 === 0 ? 'white' : 'black');
+                    square.dataset.row = i;
+                    square.dataset.col = j;
+
+                    const piece = initialBoard[i][j];
+                    if (piece !== '.') {
+                        const pieceElement = document.createElement('span');
+                        pieceElement.className = 'piece';
+                        pieceElement.textContent = pieces[piece];
+                        pieceElement.dataset.piece = piece;
+                        pieceElement.dataset.color = piece === piece.toUpperCase() ? 'white' : 'black';
+                        square.appendChild(pieceElement);
+                    }
+                    square.addEventListener('click', () => handleSquareClick(square));
+                    board.appendChild(square);
+                }
+            }
+        }
+
+        function isValidMove(piece, fromRow, fromCol, toRow, toCol) {
+            const deltaRow = Math.abs(toRow - fromRow);
+            const deltaCol = Math.abs(toCol - fromCol);
+
+            switch (piece.toLowerCase()) {
+                case 'p': // Pawn
+                    if (piece === 'P') {
+                        return (
+                            (fromCol === toCol && toRow === fromRow - 1) ||
+                            (fromCol === toCol && toRow === fromRow - 2 && fromRow === 6)
+                        );
+                    } else {
+                        return (
+                            (fromCol === toCol && toRow === fromRow + 1) ||
+                            (fromCol === toCol && toRow === fromRow + 2 && fromRow === 1)
+                        );
+                    }
+                case 'r': // Rook
+                    return fromRow === toRow || fromCol === toCol;
+                case 'n': // Knight
+                    return (deltaRow === 2 && deltaCol === 1) || (deltaRow === 1 && deltaCol === 2);
+                case 'b': // Bishop
+                    return deltaRow === deltaCol;
+                case 'q': // Queen
+                    return deltaRow === deltaCol || fromRow === toRow || fromCol === toCol;
+                case 'k': // King
+                    return deltaRow <= 1 && deltaCol <= 1;
+                default:
+                    return false;
+            }
+        }
+
+        function handleSquareClick(square) {
+            if (!timerStarted) timerStarted = true;
+            const pieceElement = square.querySelector('.piece');
+            const pieceColor = pieceElement ? pieceElement.dataset.color : null;
+            const fromRow = selectedSquare?.dataset.row;
+            const fromCol = selectedSquare?.dataset.col;
+            const toRow = square.dataset.row;
+            const toCol = square.dataset.col;
+
+            if (selectedSquare) {
+                if (square === selectedSquare) {
+                    selectedSquare.classList.remove('selected');
+                    selectedSquare = null;
+                } else if (!pieceElement || pieceColor !== currentTurn) {
+                    const piece = selectedSquare.querySelector('.piece').dataset.piece;
+                    if (isValidMove(piece, parseInt(fromRow), parseInt(fromCol), parseInt(toRow), parseInt(toCol))) {
+                        movePiece(selectedSquare, square);
+                        selectedSquare.classList.remove('selected');
+                        selectedSquare = null;
+                        currentTurn = currentTurn === 'white' ? 'black' : 'white';
+                    }
+                }
+            } else if (pieceElement && pieceColor === currentTurn) {
+                selectedSquare = square;
+                square.classList.add('selected');
+            }
+        }
+
+        function movePiece(fromSquare, toSquare) {
+            const piece = fromSquare.querySelector('.piece');
+            fromSquare.innerHTML = '';
+            toSquare.innerHTML = '';
+            toSquare.appendChild(piece);
+        }
+
+        createBoard();
+    </script>
+</body>
+</html>
